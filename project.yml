@@ -1,0 +1,74 @@
+# XcodeGen spec — generates WatchVoiceLLM.xcodeproj
+#
+#   brew install xcodegen
+#   xcodegen generate
+#   open WatchVoiceLLM.xcodeproj
+#
+# Text-defined so the project is reviewable in git and reproducible.
+# Bump DEVELOPMENT_TEAM / bundle ids for your own signing before running on device.
+
+name: WatchVoiceLLM
+
+options:
+  bundleIdPrefix: com.example.watchvoicellm
+  deploymentTarget:
+    iOS: "18.0"
+    watchOS: "11.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "6.0"
+    CODE_SIGN_STYLE: Automatic
+    # DEVELOPMENT_TEAM: XXXXXXXXXX   # <- set your team id to run on device
+    GENERATE_INFOPLIST_FILE: NO
+
+targets:
+
+  # ─────────────────────────── iPhone: the brain ───────────────────────────
+  WatchVoiceLLM:
+    type: application
+    platform: iOS
+    sources:
+      - path: iOS/Sources
+      - path: Shared/Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.watchvoicellm
+        INFOPLIST_FILE: iOS/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: iOS/Resources/iOS.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+    dependencies:
+      - target: WatchVoiceLLM-Watch
+    # When you adopt WhisperKit / MLX, add them here, e.g.:
+    # dependencies:
+    #   - package: WhisperKit
+    #   - package: MLXLLM
+
+  # ─────────────────────── Apple Watch: capture client ─────────────────────
+  WatchVoiceLLM-Watch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: Watch/Sources
+      - path: Shared/Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.watchvoicellm.watchkitapp
+        INFOPLIST_FILE: Watch/Resources/Info.plist
+        WKCompanionAppBundleIdentifier: com.example.watchvoicellm
+        WKRunsIndependentlyOfCompanionApp: NO
+
+# To pull in on-device LLM / STT later, declare packages here and wire them
+# into `dependencies` above:
+#
+# packages:
+#   WhisperKit:
+#     url: https://github.com/argmaxinc/WhisperKit
+#     from: "0.9.0"
+#   MLXLLM:
+#     url: https://github.com/ml-explore/mlx-swift-examples
+#     branch: main

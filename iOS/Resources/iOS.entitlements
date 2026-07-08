@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      Larger on-device models (e.g. 4-bit Qwen3-4B via MLX) can exceed the
+      default per-app memory ceiling. Request the increased limit; see the
+      design memo's model table. Harmless to keep while on Foundation Models.
+    -->
+    <key>com.apple.developer.kernel.increased-memory-limit</key>
+    <true/>
+</dict>
+</plist>

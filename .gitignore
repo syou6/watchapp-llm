@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+xcuserdata/
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# XcodeGen output (regenerated from project.yml)
+WatchVoiceLLM.xcodeproj/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Models (large; fetched at runtime / bundled locally)
+*.mlmodelc/
+Models/*.gguf
+Models/*.safetensors
+
+# Secrets
+*.xcconfig.local
