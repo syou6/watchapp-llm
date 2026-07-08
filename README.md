@@ -19,13 +19,23 @@
 - **STT と LLM は iPhone**：Watch から音声チャンクを送り、iPhone で処理
 - 反応は **短く・ストリーミング**で返して体感速度を稼ぐ
 
-STT と LLM はそれぞれ **プロトコルの裏**に置いてあり、実装を差し替えられます
-（設計メモの「まず動かして、あとで質を上げる」ランプに対応）。
+STT と LLM はそれぞれ **プロトコルの裏**に置いてあり、利用可能なバックエンドを
+優先度順に自動選択します（設計メモの「まず動かして、あとで質を上げる」ランプ）。
 
-| 層 | 今の実装 | 差し替え先 |
+**STT — `SpeechTranscribing`**
+
+| 実装 | 内容 | 優先 |
 |---|---|---|
-| STT | `SystemSpeechTranscriber`（`SFSpeechRecognizer`, on-device 日本語） | WhisperKit |
-| LLM | `FoundationModelsEngine`（iOS 26, 端末内 ~3B）／ `EchoReactionEngine`（モデル無しでも動く） | MLX + Qwen3-4B |
+| `WhisperKitTranscriber` | WhisperKit（on-device Whisper・日本語） | パッケージがあれば優先 |
+| `SystemSpeechTranscriber` | `SFSpeechRecognizer`（on-device 日本語・依存なし） | フォールバック |
+
+**LLM — `ReactionGenerating`**
+
+| 実装 | 内容 | 優先 |
+|---|---|---|
+| `MLXReactionEngine` | MLX + Qwen3-4B-4bit（自由度・日本語の質） | パッケージがあれば優先 |
+| `FoundationModelsEngine` | Foundation Models（iOS 26・~3B・初トークン最速） | 次点 |
+| `EchoReactionEngine` | モデル無しの擬似反応 | 最終フォールバック |
 
 ---
 
@@ -40,8 +50,8 @@ Shared/Sources/          # 両ターゲット共通
 
 iOS/Sources/             # iPhone（頭脳）
   Audio/                   AudioCapture（スタンドアロン検証用の自機マイク）
-  Speech/                  SpeechTranscribing プロトコル + SFSpeechRecognizer 実装
-  LLM/                     ReactionGenerating プロトコル + FoundationModels / Echo
+  Speech/                  SpeechTranscribing + SFSpeechRecognizer / WhisperKit + factory
+  LLM/                     ReactionGenerating + MLX(Qwen) / FoundationModels / Echo + factory
   Pipeline/                ConversationPipeline（STT→LLM の心臓）
   Connectivity/            PhoneConnectivity（WCSession, チャンク再組立→pipeline）
   UI/                      ReactionView（スタンドアロン画面）
@@ -80,7 +90,7 @@ open WatchVoiceLLM.xcodeproj
 
 - [x] 1. iPhone 単体で 音声 → STT → LLM → テキスト（`ConversationPipeline` + `ReactionView`）
 - [x] 2. Foundation Models で最短起動（`FoundationModelsEngine`, フォールバック付き）
-- [ ] 3. WhisperKit + MLX(Qwen) に差し替え（`SpeechTranscribing` / `ReactionGenerating` 実装を追加）
+- [x] 3. WhisperKit + MLX(Qwen) に差し替え（`WhisperKitTranscriber` / `MLXReactionEngine` + ファクトリ自動選択）
 - [x] 4. WatchConnectivity で Watch 集音クライアントを接続
 - [x] 5. VAD・区間送信（`VoiceActivityDetector` + チャンク送信）
 - [ ] 6. TTS（読み上げ）／話者分離（SpeakerKit）／watchOS 27 Private Cloud Compute
@@ -97,5 +107,11 @@ open WatchVoiceLLM.xcodeproj
 - リアルタイム送受信は iPhone が reachable な前提。非 reachable 時は `transferUserInfo` に
   フォールバック（確定音声・最終テキストのみ）。
 - 現状 `AudioCodec` は Int16 パックのみ。さらに絞るなら同ファイルで Opus/AAC に差し替え可能。
+- **WhisperKit / MLX は重い**：`project.yml` の `packages` に登録済みで、初回ビルドで
+  大きな Swift パッケージを解決し、モデル重み（Qwen3-4B-4bit ≈ 2.3GB）は初回実行時に
+  ダウンロードされます。軽い Echo + `SFSpeechRecognizer` だけで動かしたい場合は、
+  `project.yml` の該当 `packages` と `dependencies` をコメントアウトすれば
+  `#if canImport(...)` により自動でフォールバックします。
+- MLX の Metal 実行はシミュレータでは Apple Silicon Mac 上でのみ動作。実機推奨。
 
 詳細な判断根拠は [設計メモ](docs/design.md) を参照。

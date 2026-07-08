@@ -28,7 +28,7 @@ final class ConversationPipeline {
     private var currentJob: Task<Void, Never>?
 
     init(
-        transcriber: SpeechTranscribing = SystemSpeechTranscriber(),
+        transcriber: SpeechTranscribing = SpeechTranscriberFactory.makeDefault(),
         engine: ReactionGenerating = ReactionEngineFactory.makeDefault()
     ) {
         self.transcriber = transcriber
