@@ -3,11 +3,14 @@
 <plist version="1.0">
 <dict>
     <!--
-      Larger on-device models (e.g. 4-bit Qwen3-4B via MLX) can exceed the
-      default per-app memory ceiling. Request the increased limit; see the
-      design memo's model table. Harmless to keep while on Foundation Models.
+      Empty by default so the app signs cleanly with a free Apple ID.
+
+      When you enable the MLX / Qwen backend, large 4-bit models can exceed the
+      default per-app memory ceiling. Add the increased-memory-limit entitlement
+      then (it requires a paid Apple Developer account / provisioning profile):
+
+        <key>com.apple.developer.kernel.increased-memory-limit</key>
+        <true/>
     -->
-    <key>com.apple.developer.kernel.increased-memory-limit</key>
-    <true/>
 </dict>
 </plist>

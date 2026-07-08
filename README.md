@@ -42,6 +42,9 @@ STT と LLM はそれぞれ **プロトコルの裏**に置いてあり、利用
 ## ディレクトリ
 
 ```
+bootstrap.sh             # xcodegen 導入 → 生成 → Xcode を開く（実機セットアップ）
+project.yml              # XcodeGen スペック（3ターゲット定義）
+
 Shared/Sources/          # 両ターゲット共通
   Messages.swift           WireMessage（Watch↔iPhone のワイヤ形式）
   AudioCodec.swift         PCM を Int16 にパック（軽量圧縮）
@@ -64,25 +67,38 @@ Watch/Sources/           # Apple Watch（薄いクライアント）
 
 ---
 
-## ビルド手順（macOS + Xcode 必須）
+## 実機で試す（macOS + Xcode 必須）
 
 Xcode プロジェクトは [XcodeGen](https://github.com/yonaskolb/XcodeGen) の
-`project.yml` からテキストで生成します（差分がレビューしやすいため）。
+`project.yml` からテキストで生成します。クローン直後は**ワンコマンド**でOK:
 
 ```bash
-brew install xcodegen
-xcodegen generate          # → WatchVoiceLLM.xcodeproj
-open WatchVoiceLLM.xcodeproj
+./bootstrap.sh          # xcodegen を入れて生成し、Xcode を開く
 ```
 
-1. `project.yml` の `DEVELOPMENT_TEAM` と bundle id を自分のものに変更
-2. iPhone スキームを選んで実行（`EchoReactionEngine` によりモデル無しでも動作確認可）
-3. 実機で **マイク / 音声認識** の許可を与える
-4. Watch を接続すると、Watch のマイクから拾った声に iPhone が反応を返す
+> bundle id が無料プロビジョニングで弾かれる場合は自分のプレフィックスで:
+> `BUNDLE_PREFIX=com.yourname.watchvoicellm ./bootstrap.sh`
 
-> Foundation Models は **iOS 26 + Apple Intelligence 対応端末**が必要です。
-> 非対応環境では自動的に `EchoReactionEngine`（擬似反応）にフォールバックし、
-> パイプライン全体を最後まで検証できます。
+Xcode が開いたら:
+
+1. スキーム **WatchVoiceLLM** と実行先に**自分の iPhone** を選ぶ
+2. 各ターゲット（`WatchVoiceLLM` と `WatchVoiceLLM-Watch`）の
+   **Signing & Capabilities → Team** に自分を設定（無料 Apple ID 可・7日間有効）
+3. **⌘R** でビルド＆実行 → 初回は **マイク / 音声認識** を許可
+   - 初回、iPhone 側で *設定 > 一般 > VPN とデバイス管理* から開発者プロファイルを信頼
+4. Apple Watch でも動かすには、iPhone アプリ導入後に **Watch スキーム**（実行先＝ペア
+   済み Watch）を選んで実行
+
+**初回のバックエンド（デフォルト = 高速パス）**
+重い WhisperKit / MLX は既定で **OFF**。`SFSpeechRecognizer`（端末内・日本語）＋
+Foundation Models（対応端末のみ、非対応は Echo に自動フォールバック）で、
+**どの iPhone でも数秒でビルド**して反応ループを確認できます。
+
+より自然な反応にしたくなったら、`project.yml` の
+`WhisperKit` / `mlx-swift-lm` パッケージ2ブロック（`dependencies` と `packages`）を
+アンコメントして `./bootstrap.sh` を再実行。コードは `#if canImport(...)` で
+自動的に WhisperKit + MLX/Qwen に切り替わります（初回は大きな SPM 解決＋
+モデル重み ≈2.3GB の DL。実機推奨）。
 
 ---
 
@@ -107,11 +123,10 @@ open WatchVoiceLLM.xcodeproj
 - リアルタイム送受信は iPhone が reachable な前提。非 reachable 時は `transferUserInfo` に
   フォールバック（確定音声・最終テキストのみ）。
 - 現状 `AudioCodec` は Int16 パックのみ。さらに絞るなら同ファイルで Opus/AAC に差し替え可能。
-- **WhisperKit / MLX は重い**：`project.yml` の `packages` に登録済みで、初回ビルドで
-  大きな Swift パッケージを解決し、モデル重み（Qwen3-4B-4bit ≈ 2.3GB）は初回実行時に
-  ダウンロードされます。軽い Echo + `SFSpeechRecognizer` だけで動かしたい場合は、
-  `project.yml` の該当 `packages` と `dependencies` をコメントアウトすれば
-  `#if canImport(...)` により自動でフォールバックします。
+- **WhisperKit / MLX は既定で OFF**：初回ビルドを速くするため `project.yml` で
+  コメントアウト済み。アンコメントで有効化すると、初回ビルドで大きな Swift パッケージを
+  解決し、モデル重み（Qwen3-4B-4bit ≈ 2.3GB）は初回実行時にダウンロードされます。
+  切り替えはコードに触れず `#if canImport(...)` が自動でフォールバック/昇格します。
 - MLX の Metal 実行はシミュレータでは Apple Silicon Mac 上でのみ動作。実機推奨。
 
 詳細な判断根拠は [設計メモ](docs/design.md) を参照。

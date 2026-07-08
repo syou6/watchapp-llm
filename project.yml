@@ -43,13 +43,16 @@ targets:
         SUPPORTS_MACCATALYST: NO
     dependencies:
       - target: WatchVoiceLLM-Watch
-      # On-device STT (activates WhisperKitTranscriber via #if canImport(WhisperKit))
-      - package: WhisperKit
-      # On-device LLM (activates MLXReactionEngine via #if canImport(MLXLLM))
-      - package: mlx-swift-lm
-        product: MLXLLM
-      - package: mlx-swift-lm
-        product: MLXLMCommon
+      # ── Heavy on-device backends: OFF by default for a fast first build. ──
+      # Uncomment these three + the `packages:` block at the bottom to activate
+      # WhisperKit (STT) and MLX/Qwen (LLM). The code auto-detects them via
+      # #if canImport(...); with them off you get SFSpeechRecognizer + Foundation
+      # Models (falling back to Echo), which builds in seconds on any iPhone.
+      # - package: WhisperKit
+      # - package: mlx-swift-lm
+      #   product: MLXLLM
+      # - package: mlx-swift-lm
+      #   product: MLXLMCommon
 
   # ─────────────────────── Apple Watch: capture client ─────────────────────
   WatchVoiceLLM-Watch:
@@ -65,15 +68,16 @@ targets:
         WKCompanionAppBundleIdentifier: com.example.watchvoicellm
         WKRunsIndependentlyOfCompanionApp: NO
 
-# On-device STT (WhisperKit) and LLM (MLX / Qwen). These are heavy: the first
-# build resolves large Swift packages and the model weights download at runtime
-# (Qwen3-4B-4bit is ~2.3 GB). If you only want the light Echo + SFSpeechRecognizer
-# path, comment out these packages AND their `dependencies` entries above — the
-# `#if canImport(...)` gates make the code fall back automatically.
-packages:
-  WhisperKit:
-    url: https://github.com/argmaxinc/WhisperKit
-    from: "0.9.0"
-  mlx-swift-lm:
-    url: https://github.com/ml-explore/mlx-swift-lm
-    branch: main
+# ── Heavy on-device backends (OFF by default) ──
+# Uncomment this block AND the matching `dependencies` entries above to activate
+# WhisperKit (STT) and MLX/Qwen (LLM). Heads up: the first build resolves large
+# Swift packages and the model weights download at runtime (Qwen3-4B-4bit is
+# ~2.3 GB), so real-device is recommended for this path.
+#
+# packages:
+#   WhisperKit:
+#     url: https://github.com/argmaxinc/WhisperKit
+#     from: "0.9.0"
+#   mlx-swift-lm:
+#     url: https://github.com/ml-explore/mlx-swift-lm
+#     branch: main
